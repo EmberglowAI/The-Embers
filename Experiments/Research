@@ -1,0 +1,234 @@
+import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
+
+interface ResearchNote {
+  id: number;
+  content: string;
+  createdAt: string;
+}
+
+const GenerativeAiResearchPage: React.FC = () => {
+  const [apiKey, setApiKey] = useState<string>('');
+  const [prompt, setPrompt] = useState<string>('');
+  const [aiResponse, setAiResponse] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [notes, setNotes] = useState<string>('');
+  const [saveStatus, setSaveStatus] = useState<string>('');
+  const [savedNotesList, setSavedNotesList] = useState<ResearchNote[]>([]);
+
+  // Load notes from localStorage on initial render
+  useEffect(() => {
+    const storedNotes = localStorage.getItem('generativeAiResearchNotes');
+    if (storedNotes) {
+      setNotes(storedNotes);
+    }
+    const storedSavedNotesList = localStorage.getItem('generativeAiSavedNotesList');
+     if (storedSavedNotesList) {
+       try {
+         setSavedNotesList(JSON.parse(storedSavedNotesList));
+       } catch (error) {
+         console.error("Failed to parse saved notes list from localStorage:", error);
+         setSavedNotesList([]); // Reset if parsing fails
+       }
+     }
+  }, []);
+
+  const handleApiKeyChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setApiKey(event.target.value);
+  };
+
+  const handlePromptChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    setPrompt(event.target.value);
+  };
+
+  const handleNotesChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    setNotes(event.target.value);
+    if (saveStatus) setSaveStatus(''); // Clear save status when notes change
+  };
+
+  const handleGenerate = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!apiKey || !prompt) {
+      setAiResponse('Please enter both an API key and a prompt.');
+      return;
+    }
+    setIsLoading(true);
+    setAiResponse('');
+
+    // Simulate API call
+    console.log(`Simulating API call with key: ${apiKey.substring(0, 5)}... and prompt: "${prompt}"`);
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
+
+    // In a real app, you would make the actual API call here using fetch or axios
+    // const response = await fetch('/api/generate', { // Example endpoint
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //     'Authorization': `Bearer ${apiKey}`
+    //   },
+    //   body: JSON.stringify({ prompt })
+    // });
+    // const data = await response.json();
+    // setAiResponse(data.completion);
+
+    // Simulated response
+    setAiResponse(`This is a simulated response to your prompt: "${prompt}". In a real application, the actual model output would appear here.`);
+    setIsLoading(false);
+  };
+
+  const handleSaveNotes = () => {
+    try {
+        const newNote: ResearchNote = {
+            id: Date.now(),
+            content: notes,
+            createdAt: new Date().toISOString(),
+        };
+        const updatedList = [...savedNotesList, newNote];
+        localStorage.setItem('generativeAiSavedNotesList', JSON.stringify(updatedList));
+        localStorage.setItem('generativeAiResearchNotes', notes); // Also save current draft
+        setSavedNotesList(updatedList);
+        setSaveStatus('Notes saved successfully!');
+        // Optionally clear the current note editor after saving to the list
+        // setNotes('');
+        setTimeout(() => setSaveStatus(''), 3000); // Clear status after 3 seconds
+    } catch (error) {
+        console.error("Failed to save notes:", error);
+        setSaveStatus('Failed to save notes.');
+         setTimeout(() => setSaveStatus(''), 3000);
+    }
+  };
+
+ const handleDeleteNote = (id: number) => {
+    const updatedList = savedNotesList.filter(note => note.id !== id);
+    setSavedNotesList(updatedList);
+    localStorage.setItem('generativeAiSavedNotesList', JSON.stringify(updatedList));
+    setSaveStatus('Note deleted.');
+    setTimeout(() => setSaveStatus(''), 3000);
+  };
+
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-4 md:p-8">
+      <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6">
+        <h1 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">Generative AI Research Assistant</h1>
+
+        {/* API Key Section */}
+        <section className="mb-6">
+          <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 mb-1">
+            API Key
+          </label>
+          <input
+            type="password"
+            id="apiKey"
+            value={apiKey}
+            onChange={handleApiKeyChange}
+            placeholder="Enter your AI model API key"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          />
+          <p className="mt-1 text-xs text-gray-500">Your key is used only in your browser and not stored serverside.</p>
+        </section>
+
+        {/* AI Interaction Section */}
+        <section className="mb-6 border-t pt-6">
+          <h2 className="text-lg font-semibold text-gray-700 mb-3">AI Model Interaction</h2>
+          <form onSubmit={handleGenerate}>
+            <div className="mb-4">
+              <label htmlFor="prompt" className="block text-sm font-medium text-gray-700 mb-1">
+                Prompt
+              </label>
+              <textarea
+                id="prompt"
+                rows={4}
+                value={prompt}
+                onChange={handlePromptChange}
+                placeholder="Enter your prompt here..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isLoading || !apiKey || !prompt}
+              className={`inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white ${
+                isLoading || !apiKey || !prompt
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
+              }`}
+            >
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Generating...
+                </>
+              ) : (
+                'Generate Response'
+              )}
+            </button>
+          </form>
+
+          {aiResponse && (
+            <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-md">
+              <h3 className="text-sm font-semibold text-gray-600 mb-2">AI Response:</h3>
+              <p className="text-sm text-gray-800 whitespace-pre-wrap">{aiResponse}</p>
+            </div>
+          )}
+        </section>
+
+        {/* Note Taking Section */}
+        <section className="mb-6 border-t pt-6">
+          <h2 className="text-lg font-semibold text-gray-700 mb-3">Research Notes</h2>
+           <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1 sr-only">
+                Notes
+            </label>
+          <textarea
+            id="notes"
+            rows={8}
+            value={notes}
+            onChange={handleNotesChange}
+            placeholder="Take your research notes here. They will be saved in your browser's local storage."
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          />
+          <div className="mt-3 flex justify-between items-center">
+            <button
+              onClick={handleSaveNotes}
+              className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            >
+              Save Current Note
+            </button>
+            {saveStatus && <span className="text-sm text-green-700">{saveStatus}</span>}
+          </div>
+        </section>
+
+        {/* Saved Notes List */}
+        {savedNotesList.length > 0 && (
+            <section className="border-t pt-6">
+                <h2 className="text-lg font-semibold text-gray-700 mb-3">Saved Notes History</h2>
+                <ul className="space-y-4">
+                    {savedNotesList.slice().reverse().map((note) => ( // Show newest first
+                        <li key={note.id} className="p-4 bg-gray-50 border border-gray-200 rounded-md shadow-sm">
+                            <div className="flex justify-between items-start mb-2">
+                                <p className="text-xs text-gray-500">
+                                    Saved on: {new Date(note.createdAt).toLocaleString()}
+                                </p>
+                                <button
+                                    onClick={() => handleDeleteNote(note.id)}
+                                    className="text-red-500 hover:text-red-700 text-xs font-medium"
+                                    aria-label="Delete note"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                            <p className="text-sm text-gray-800 whitespace-pre-wrap">{note.content}</p>
+                        </li>
+                    ))}
+                </ul>
+            </section>
+        )}
+
+      </div>
+    </div>
+  );
+};
+
+export default GenerativeAiResearchPage;
